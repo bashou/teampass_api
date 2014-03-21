@@ -28,3 +28,48 @@ $teampass_sk_file = "/space/private/teampass/sk.php"; // Path to private file wh
 $apikey_pool = Array("aefoongap6iT4bieGhai1quahzeiwah8","aefoongap6iT4bieGhai1quahDEKf93"); // Array of apikeys
 $ip_whitelist = Array('127.0.0.1','8.8.8.8'); // Array of ip address allowed to use api (open world if empty)
 ```
+
+How to use
+==========
+
+- Read a category
+```
+GET http://url/to/api/index.php/read/category/<category name>?apikey=<api key> # For top level category
+GET http://url/to/api/index.php/read/category/<category name>;<sub-category name?apikey=<api key> # For sub category
+```
+
+```
+{
+    "1": {
+        "label": "item 1",
+        "login": "foo",
+        "pw": "bar"
+    },
+    "2": {
+        "label": "item 2",
+        "login": "foo",
+        "pw": "bar"
+    },
+    "3": {
+        "label": "item 3",
+        "login": "foo",
+        "pw": "bar"
+    }
+}
+```
+
+- Read an item
+```
+GET http://url/to/api/index.php/read/item/<category name>/<item name>?apikey=<api key> # For item in top level category
+GET http://url/to/api/index.php/read/item/<category name>;<sub-category name/<item name>?apikey=<api key> # For item in sub category
+```
+
+```
+{
+    "1": {
+        "label": "item 1",
+        "login": "foo",
+        "pw": "bar"
+    },
+}
+```
