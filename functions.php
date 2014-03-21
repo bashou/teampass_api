@@ -1,4 +1,161 @@
+
 <?php
+
+function teampass_connect() {
+	require_once($GLOBALS['teampass_config_file']);
+	try
+	{
+		$bdd = new PDO("mysql:host=".$GLOBALS['server'].";dbname=".$GLOBALS['database'], $GLOBALS['user'], $GLOBALS['pass']);
+		return ($bdd);
+	}
+	catch (Exception $e)
+	{
+		rest_error('MYSQLERR', 'Error : ' . $e->getMessage());
+	}
+
+}
+
+function teampass_get_randkey() {
+	$bdd = teampass_connect();
+	$response = $bdd->query("select rand_key from ".$GLOBALS['pre']."keys limit 0,1");
+
+	$array = $response->fetch(PDO::FETCH_OBJ);
+
+	return $array->rand_key;
+}
+
+function rest_get () {
+	if(apikey_checker($GLOBALS['apikey'])) {
+		$bdd = teampass_connect();
+		$rand_key = teampass_get_randkey();
+
+		if ($GLOBALS['request'][0] == "read") {
+			if($GLOBALS['request'][1] == "category") {
+				$array_category = explode(';',$GLOBALS['request'][2]);
+
+				foreach($array_category as $category) {
+					if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $category,$result)) {
+						rest_error('CATEGORY_MALFORMED');
+					}
+				}
+
+				if(count($array_category) > 1 && count($array_category) < 5) {
+					for ($i = count($array_category); $i > 0; $i--) {
+						$slot = $i - 1;
+						if (!$slot) {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = 0";
+						} else {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = (";
+						}
+					}
+					for ($i = 1; $i < count($array_category); $i++) { $category_query .= ")"; }
+				} elseif (count($array_category) == 1) {
+					$category_query = "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[0]."' AND parent_id = 0";
+				} else {
+					rest_error ('NO_CATEGORY');
+				}
+				$response = $bdd->query("select id,label,login,pw,id_tree from ".$GLOBALS['pre']."items where id_tree = (".$category_query.")");
+				while ($data = $response->fetch())
+				{
+					$id = $data['id'];
+					$json[$id]['label'] = utf8_encode($data['label']);
+					$json[$id]['login'] = utf8_encode($data['login']);
+					$json[$id]['pw'] = teampass_decrypt_pw($data['pw'],SALT,$rand_key);
+				}
+			} elseif($GLOBALS['request'][1] == "item") {
+				$array_category = explode(';',$GLOBALS['request'][2]);
+				$item = $GLOBALS['request'][3];
+
+				foreach($array_category as $category) {
+					if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $category,$result)) {
+						rest_error('CATEGORY_MALFORMED');
+					}
+				}
+
+				if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $item,$result)) {
+					rest_error('ITEM_MALFORMED');
+				} elseif (empty($item) || count($array_category) == 0) {
+					rest_error('MALFORMED');
+				}
+
+
+				if(count($array_category) > 1 && count($array_category) < 5) {
+					for ($i = count($array_category); $i > 0; $i--) {
+						$slot = $i - 1;
+						if (!$slot) {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = 0";
+						} else {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = (";
+						}
+					}
+					for ($i = 1; $i < count($array_category); $i++) { $category_query .= ")"; }
+				} elseif (count($array_category) == 1) {
+					$category_query = "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[0]."' AND parent_id = 0";
+				} else {
+					rest_error ('NO_CATEGORY');
+				}
+				$response = $bdd->query("select id,label,login,pw,id_tree from ".$GLOBALS['pre']."items where id_tree = (".$category_query.") and label LIKE '".$item."'");
+				while ($data = $response->fetch())
+				{
+					$id = $data['id'];
+					$json[$id]['label'] = utf8_encode($data['label']);
+					$json[$id]['login'] = utf8_encode($data['login']);
+					$json[$id]['pw'] = teampass_decrypt_pw($data['pw'],SALT,$rand_key);
+				}
+			}
+
+			if ($json) {
+				echo json_encode($json);
+			} else {
+				rest_error ('EMPTY');
+			}
+		} else {
+			rest_error ('METHOD');
+		}
+	}
+}
+
+function rest_error ($type,$detail) {
+	switch ($type) {
+  		case 'APIKEY':
+		$message = Array('err' => 'This api_key '.$GLOBALS['apikey'].' doesn\'t exist');
+		header('HTTP/1.1 405 Method Not Allowed');
+    		break;
+  		case 'NO_CATEGORY':
+		$message = Array('err' => 'No category specified');
+    		break;
+  		case 'EMPTY':
+		$message = Array('err' => 'No results');
+    		break;
+		case 'IPWHITELIST':
+		$message = Array('err' => 'Ip address '.$_SERVER['REMOTE_ADDR'].' not allowed.');
+		header('HTTP/1.1 405 Method Not Allowed');
+		break;
+		case 'MYSQLERR':
+		$message = Array('err' => $detail);
+		header('HTTP/1.1 500 Internal Server Error');
+		break;
+		case 'METHOD':
+		$message = Array('err' => 'Method not authorized');
+		header('HTTP/1.1 405 Method Not Allowed');
+		break;
+		default:
+		$message = Array('err' => 'Something happen ... but what ?');
+		header('HTTP/1.1 500 Internal Server Error');
+		break;
+	}
+
+	echo json_encode($message);
+	exit(0);
+}
+
+function apikey_checker ($apikey_used) {
+	if (in_array($apikey_used,$GLOBALS['apikey_pool'])) {
+		return(1);
+	} else {
+		rest_error('APIKEY',$apikey_used);
+	}
+}
 
 function teampass_pbkdf2_hash($p, $s, $c, $kl, $st = 0, $a = 'sha256')
 {
@@ -18,16 +175,6 @@ function teampass_pbkdf2_hash($p, $s, $c, $kl, $st = 0, $a = 'sha256')
 
 function teampass_decrypt_pw($encrypted, $salt, $rand_key, $itcount = 2072)
 {
-
-	# example parameters:
-	#   $encoded  = 'K2QwSkV0U2ZtNjRRUUE3Sk5jY0poWWtNbTQ0aUhydmZsZEdpeGJPVWxlWTLGNAPoPi13x0BAkLcm4tCnG3xb9Aer+iuxUGQ5N2MxZWFmM2NmZjIxMjlhMjE5NjE1ZTY4ZmQzZTFiNDZlMzZkMjZmOGNlMTg3ZjZjM2YzYjQ0YTNhYzUyYWZrdHVzMTA3c3c1d2M4cDE5bWNiczd1cHlwbmk5em5hN2JuY3A1bjM2bTl1czkzY2FvZG90emxyajV4Z3o4NHkx';
-	#   $password = 'MTMFQe$&e3Zb';
-	#   $salt     = 'SpTxzu6h6c5ZSX6WSpTxzu6h6c5ZSX6W';
-	#   $rand_key = 'b8e01b8c9f32ab8';
-
-	$decoded = teampass_decrypt_pw($encoded, $salt, $rand_key);
-
-
     $encrypted = base64_decode($encrypted);
     $pass_salt = substr($encrypted, -64);
     $encrypted = substr($encrypted, 0, -64);
@@ -38,10 +185,6 @@ function teampass_decrypt_pw($encrypted, $salt, $rand_key, $itcount = 2072)
     $encrypted = substr($encrypted, 0, -64);
     if ($mac !== hash_hmac('sha256', $encrypted, $salt)) return null;
     return substr(rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, $encrypted, 'ctr', $iv), "\0\4"), strlen($rand_key));
-}
-
-function rest_get ($request) {
-	var_dump($request);
 }
 
 ?>
