@@ -17,20 +17,12 @@ Requirements
 - Teampass Instance near
 - Little cup of tea
 
-How to use
-==========
+Installation
+============
 
-...
-
-Changelog
-========
-
-v0.1.1
-- Read API
-- List all items from a category
-- List a specific item
-
-v0.1
-- Multi api key
-- IP Whitelisting (but already need apikey)
-- Init PHP skel to begin
+- Modify config.php file with your values :
+ $teampass_path = "/space/www/teampass"; // Path to Teampass instance
+ $teampass_config_file = $teampass_path."/includes/settings.php"; // Path to Teampass config file for db settings
+ $teampass_sk_file = "/space/private/teampass/sk.php"; // Path to private file which contain SALT variable
+ $apikey_pool = Array("aefoongap6iT4bieGhai1quahzeiwah8","aefoongap6iT4bieGhai1quahDEKf93"); // Array of apikeys
+ $ip_whitelist = Array('127.0.0.1','8.8.8.8'); // Array of ip address allowed to use api (open world if empty)
