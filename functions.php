@@ -1,6 +1,12 @@
 
 <?php
 
+function teampass_whitelist() {
+	if (count($GLOBALS['ip_whitelist']) > 0 && !in_array($_SERVER['REMOTE_ADDR'], $GLOBALS['ip_whitelist'])) {
+		rest_error('IPWHITELIST');
+	}
+}
+
 function teampass_connect() {
 	require_once($GLOBALS['teampass_config_file']);
 	try
@@ -22,6 +28,100 @@ function teampass_get_randkey() {
 	$array = $response->fetch(PDO::FETCH_OBJ);
 
 	return $array->rand_key;
+}
+
+function rest_delete () {
+	if(apikey_checker($GLOBALS['apikey'])) {
+		$bdd = teampass_connect();
+		$rand_key = teampass_get_randkey();
+
+		if ($GLOBALS['request'][0] == "write") {
+			if($GLOBALS['request'][1] == "category") {
+				$array_category = explode(';',$GLOBALS['request'][2]);
+
+				foreach($array_category as $category) {
+					if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $category,$result)) {
+						rest_error('CATEGORY_MALFORMED');
+					}
+				}
+
+				if(count($array_category) > 1 && count($array_category) < 5) {
+					for ($i = count($array_category); $i > 0; $i--) {
+						$slot = $i - 1;
+						if (!$slot) {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = 0";
+						} else {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = (";
+						}
+					}
+					for ($i = 1; $i < count($array_category); $i++) { $category_query .= ")"; }
+				} elseif (count($array_category) == 1) {
+					$category_query = "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[0]."' AND parent_id = 0";
+				} else {
+					rest_error ('NO_CATEGORY');
+				}
+
+				// Delete items which in category
+				$response = $bdd->query("delete from ".$GLOBALS['pre']."items where id_tree = (".$category_query.")");
+				// Delete sub-categories which in category
+				$response = $bdd->query("delete from ".$GLOBALS['pre']."nested_tree where id_parent = (".$category_query.")");
+				// Delete category
+				$response = $bdd->query("delete from ".$GLOBALS['pre']."nested_tree where id = (".$category_query.")");
+
+				$json['type'] = 'category';
+				$json['category'] = $GLOBALS['request'][2];
+				$json['status'] = $response;
+
+			} elseif($GLOBALS['request'][1] == "item") {
+				$array_category = explode(';',$GLOBALS['request'][2]);
+				$item = $GLOBALS['request'][3];
+
+				foreach($array_category as $category) {
+					if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $category,$result)) {
+						rest_error('CATEGORY_MALFORMED');
+					}
+				}
+
+				if(!preg_match_all("/^([\w\:\'\-\sàáâãäåçèéêëìíîïðòóôõöùúûüýÿ]+)$/i", $item,$result)) {
+					rest_error('ITEM_MALFORMED');
+				} elseif (empty($item) || count($array_category) == 0) {
+					rest_error('MALFORMED');
+				}
+
+
+				if(count($array_category) > 1 && count($array_category) < 5) {
+					for ($i = count($array_category); $i > 0; $i--) {
+						$slot = $i - 1;
+						if (!$slot) {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = 0";
+						} else {
+							$category_query .= "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[$slot]."' AND parent_id = (";
+						}
+					}
+					for ($i = 1; $i < count($array_category); $i++) { $category_query .= ")"; }
+				} elseif (count($array_category) == 1) {
+					$category_query = "select id from ".$GLOBALS['pre']."nested_tree where title LIKE '".$array_category[0]."' AND parent_id = 0";
+				} else {
+					rest_error ('NO_CATEGORY');
+				}
+
+				// Delete item
+				$response = $bdd->query("delete from ".$GLOBALS['pre']."items where id_tree = (".$category_query.") and label LIKE '".$item."'");
+				$json['type'] = 'item';
+				$json['item'] = $item;
+				$json['category'] = $GLOBALS['request'][2];
+				$json['status'] = $response;
+			}
+
+			if ($json) {
+				echo json_encode($json);
+			} else {
+				rest_error ('EMPTY');
+			}
+		} else {
+			rest_error ('METHOD');
+		}
+	}
 }
 
 function rest_get () {
@@ -54,7 +154,7 @@ function rest_get () {
 				} else {
 					rest_error ('NO_CATEGORY');
 				}
-				$response = $bdd->query("select id,label,login,pw,id_tree from ".$GLOBALS['pre']."items where id_tree = (".$category_query.")");
+				$response = $bdd->query("select id,label,login,pw from ".$GLOBALS['pre']."items where id_tree = (".$category_query.")");
 				while ($data = $response->fetch())
 				{
 					$id = $data['id'];
