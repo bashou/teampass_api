@@ -60,7 +60,7 @@ function rest_get () {
 					$id = $data['id'];
 					$json[$id]['label'] = utf8_encode($data['label']);
 					$json[$id]['login'] = utf8_encode($data['login']);
-					$json[$id]['pw'] = teampass_decrypt_pw($data['pw'],SALT,$rand_key);
+//					$json[$id]['pw'] = teampass_decrypt_pw($data['pw'],SALT,$rand_key);
 				}
 			} elseif($GLOBALS['request'][1] == "item") {
 				$array_category = explode(';',$GLOBALS['request'][2]);
