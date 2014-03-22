@@ -1,5 +1,8 @@
 Changelog
 ========
+v0.1.2
+- Implement DELETE
+- Code optimization
 
 v0.1.1
 - Read API
