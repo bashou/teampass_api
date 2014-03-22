@@ -14,23 +14,14 @@ $request = explode("/", substr(@$_SERVER['PATH_INFO'], 1));
 header('Content-Type: application/json');
 
 switch ($method) {
-  case 'PUT':
-    rest_put();
+  case 'GET':
+    rest_get();
     break;
   case 'POST':
     rest_post();
     break;
-  case 'GET':
-    rest_get();
-    break;
   case 'HEAD':
     rest_head();
-    break;
-  case 'DELETE':
-    rest_delete();
-    break;
-  case 'OPTIONS':
-    rest_options();
     break;
   default:
     rest_error('UNKNOWN');
