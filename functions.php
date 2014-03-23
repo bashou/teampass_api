@@ -68,7 +68,7 @@ function rest_delete () {
 				// Delete items which in category
 				$response = $bdd->query("delete from ".$GLOBALS['pre']."items where id_tree = (".$category_query.")");
 				// Delete sub-categories which in category
-				$response = $bdd->query("delete from ".$GLOBALS['pre']."nested_tree where id_parent = (".$category_query.")");
+				$response = $bdd->query("delete from ".$GLOBALS['pre']."nested_tree where parent_id = (".$category_query.")");
 				// Delete category
 				$response = $bdd->query("delete from ".$GLOBALS['pre']."nested_tree where id = (".$category_query.")");
 
