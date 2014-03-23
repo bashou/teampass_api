@@ -118,7 +118,11 @@ function rest_delete () {
 				$json['type'] = 'item';
 				$json['item'] = $item;
 				$json['category'] = $GLOBALS['request'][2];
-				$json['status'] = $response;
+				if($response) {
+					$json['status'] = 'OK';
+				} else {
+					$json['status'] = 'KO';					
+				}
 			}
 
 			if ($json) {
