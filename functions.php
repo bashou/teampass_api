@@ -74,7 +74,11 @@ function rest_delete () {
 
 				$json['type'] = 'category';
 				$json['category'] = $GLOBALS['request'][2];
-				$json['status'] = $response;
+				if($response) {
+					$json['status'] = 'OK';
+				} else {
+					$json['status'] = 'KO';					
+				}
 
 			} elseif($GLOBALS['request'][1] == "item") {
 				$array_category = explode(';',$GLOBALS['request'][2]);
