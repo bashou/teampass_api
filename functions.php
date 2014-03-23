@@ -30,6 +30,10 @@ function teampass_get_randkey() {
 	return $array->rand_key;
 }
 
+function rest_head () {
+	header('HTTP/1.1 402 Payment Required');
+}
+
 function rest_delete () {
 	if(apikey_checker($GLOBALS['apikey'])) {
 		$bdd = teampass_connect();
