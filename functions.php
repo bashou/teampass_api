@@ -227,7 +227,7 @@ function rest_get () {
 	}
 }
 
-function rest_error ($type,$detail) {
+function rest_error ($type,$detail = 'N/A') {
 	switch ($type) {
   		case 'APIKEY':
 		$message = Array('err' => 'This api_key '.$GLOBALS['apikey'].' doesn\'t exist');
